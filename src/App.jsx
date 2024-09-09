@@ -1,17 +1,22 @@
 import axios from "axios";
-import React, { useRef, useState } from "react";
-import { useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 function App() {
   const [question, setQuestion] = useState([]);
   const [questionState, setQuestionState] = useState(0);
-
+  const [started, setStarted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [loading, setLoading] = useState(true);
   const checkedInput = useRef([]);
+
   useEffect(() => {
     axios("https://the-trivia-api.com/v2/questions")
       .then((res) => {
-        console.log(res.data);
-        setQuestion(res.data);
+        const shuffleedQuestions = shuffleArray(res.data);
+        setQuestion(shuffleedQuestions);
+        setLoading(false);
+        // console.log(res.data);
       })
       .catch((err) => {
         console.log(err);
@@ -30,52 +35,84 @@ function App() {
     return array;
   }
 
-  function nextQuestion(index) {
+  function startQuiz() {
+    setStarted(true);
+  }
+
+  function nextQuestion() {
     const checkedButton = checkedInput.current.find((input) => input.checked);
-    if (checkedButton) {
-      const selectedValue = checkedButton.value;
-      console.log("Selected answer:", selectedValue);
+    if (!checkedButton) {
+      alert("Please select an answer");
+      return;
     }
 
-    questionState < question.length - 1
-      ? setQuestionState(questionState + 1)
-      : alert("Question are completed");
+    const selectedValue = checkedButton.value;
+    console.log("Selected answer:", selectedValue);
+    if (selectedValue === question[questionState].correctAnswer) {
+      setScore(score + 1);
+    }
+
+    if (questionState < question.length - 1) {
+      setQuestionState(questionState + 1);
+    } else {
+      setShowResult(true);
+    }
+  }
+
+  function playAgain() {
+    setStarted(false);
+    setShowResult(false);
+    setQuestionState(0);
+    setScore(0);
   }
 
   return (
     <>
-      <h1>Quiz App</h1>
-      {question.length > 0 ? (
-        <div>
-          <h1>
-            Q{questionState + 1}: {question[questionState].question.text}
-          </h1>
-          <ul>
-            {shuffleArray([
-              ...question[questionState].incorrectAnswers,
-              question[questionState].correctAnswer,
-            ]).map((item, index) => {
-              return (
-                <li key={index}>
-                  <input
-                    type="radio"
-                    name="choice"
-                    id={item}
-                    value={item}
-                    ref={(el) => (checkedInput.current[index] = el)}
-                  />
-                  <label htmlFor={item}>{item}</label>
-                </li>
-              );
-            })}
-          </ul>
-          <button onClick={() => nextQuestion()}>Next {question.length}</button>
-        </div>
+      <h1>General knowledge Quiz </h1>
+      {started === true ? (
+        loading ? (
+          <h1>Loading...</h1>
+        ) : (
+          (showResult && (
+            <div>
+              <h1>Quiz Result</h1>
+              <p>
+                Your score is {score} out of {question.length}
+              </p>
+              <button onClick={playAgain}> Play Again</button>
+            </div>
+          )) || (
+            <div>
+              <h1>
+                Q{questionState + 1}: {question[questionState].question.text}
+              </h1>
+              <ul>
+                {shuffleArray([
+                  ...question[questionState].incorrectAnswers,
+                  question[questionState].correctAnswer,
+                ]).map((item, index) => {
+                  return (
+                    <li key={index}>
+                      <input
+                        type="radio"
+                        name="choice"
+                        id={item}
+                        value={item}
+                        ref={(el) => (checkedInput.current[index] = el)}
+                      />
+                      <label htmlFor={item}>{item}</label>
+                    </li>
+                  );
+                })}
+              </ul>
+              <button onClick={nextQuestion}>Next</button>
+            </div>
+          )
+        )
       ) : (
-        <h1>Loading...</h1>
+        <button onClick={startQuiz}>Start Quiz</button>
       )}
     </>
   );
 }
-
 export default App;
